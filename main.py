@@ -84,7 +84,37 @@ def analyze_document(request: DocumentRequest):
         )
     result_text = ai_response.text
 
-    # 6. Return the summarized text and extracted information
+    return {
+        "response": result_text
+    }
+
+@app.post("/analyze-risk")
+def analyze_document(request: DocumentRequest):
+    
+    pdf_url = request.url
+    filename = download_document(pdf_url)
+    sample_pdf = client.files.upload(file=filename)
+
+    instruction = f"""Your are an expert accountant and knowledgeable in financing. I want you do the following with the inputed document text.
+                    
+                    Task:
+                        _Analyze the provided financial statements and contract documents for potential non-compliance, fraud, or high-risk issues.
+                        _Identify suspicious expenses, tax vulnerabilities, IFRS/GAAP gaps, and problematic vendor terms.
+                        _Summarize each finding clearly, referencing specific data or clauses.
+                        _Recommend practical actions or changes to address the identified risks.
+
+                        Output:
+                        _A brief list of issues with direct references to the source documents.
+                        _A short explanation of how each issue might indicate fraud, tax exposure, or accounting compliance problems.
+                        _Clear next steps or best practices to mitigate and prevent each risk.
+    """
+
+    ai_response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[instruction, sample_pdf],
+        )
+    result_text = ai_response.text
+
     return {
         "response": result_text
     }
