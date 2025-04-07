@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from google import genai
 import requests
 from fastapi import FastAPI, Query
+import tempfile
 
 # Pydantic model to parse incoming request data
 class ChatbotRequest(BaseModel):
@@ -11,6 +12,10 @@ class ChatbotRequest(BaseModel):
 
 class DocumentRequest(BaseModel):
     url: str
+
+class InvoiceInput(BaseModel):
+    invoice_url: str
+    purchase_order_url: str
 
 # Load the API key from environment variable
 api_key = os.environ.get("GOOGLE_GENAI_API_KEY")
@@ -118,3 +123,68 @@ def analyze_document(request: DocumentRequest):
     return {
         "response": result_text
     }
+
+
+
+
+@app.post("/analyze_invoice")
+async def analyze_invoice(data: InvoiceInput):
+    # Download the invoice PDF
+    try:
+        invoice_resp = requests.get(data.invoice_url)
+        invoice_resp.raise_for_status()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error downloading invoice file: {e}")
+
+    # Download the purchase order PDF
+    try:
+        po_resp = requests.get(data.purchase_order_url)
+        po_resp.raise_for_status()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error downloading purchase order file: {e}")
+
+    # Save both files to temporary locations.
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_invoice:
+            temp_invoice.write(invoice_resp.content)
+            invoice_filepath = temp_invoice.name
+
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_po:
+            temp_po.write(po_resp.content)
+            po_filepath = temp_po.name
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving temporary files: {e}")
+
+    # Upload the files to Gemini.
+    try:
+        invoice_doc = client.files.upload(file=invoice_filepath)
+        purchase_order_doc = client.files.upload(file=po_filepath)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error uploading files to Gemini: {e}")
+    finally:
+        # Clean up temporary files.
+        os.remove(invoice_filepath)
+        os.remove(po_filepath)
+
+    # Define a detailed prompt to instruct the model.
+    prompt = (
+        "You are a finance assistant who processes invoices and purchase orders. "
+        "The first document is a supplier invoice and the second is an internal purchase order. "
+        "Extract the following details from the invoice: vendor name, invoice number, invoice date, due date, and total amount. "
+        "Also, extract the following details from the purchase order: vendor name, purchase order number, order date, total amount, and item details. "
+        "Compare the two documents and provide a plain text summary suitable for a chat window. "
+        "Format your answer using clear headings and bullet points to list the extracted information and highlight any discrepancies, such as mismatches in amounts or missing items. "
+        "Do not output JSON; instead, produce a narrative summary."
+    )
+
+    # Generate the human-readable summary.
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[invoice_doc, purchase_order_doc, prompt]
+        )
+        result_text = response.text
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating content: {e}")
+
+    return {"result": result_text}
