@@ -127,7 +127,7 @@ def analyze_document(request: DocumentRequest):
 
 
 
-@app.post("/analyze_invoice")
+@app.post("/analyze-invoice")
 async def analyze_invoice(data: InvoiceInput):
     # Download the invoice PDF
     try:
