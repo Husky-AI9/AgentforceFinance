@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Form, HTTPException
 from pydantic import BaseModel
 from google import genai
 import requests
