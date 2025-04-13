@@ -22,6 +22,12 @@ class InvoiceInput(BaseModel):
     invoice_url: str
     purchase_order_url: str
 
+class ForecastRequest(BaseModel):
+    csv_url: str
+    time_col: str
+    value_col: str
+    prediction_steps: int = 12
+
 # Load the API key from environment variable
 api_key = os.environ.get("GOOGLE_GENAI_API_KEY")
 if not api_key:
@@ -258,28 +264,21 @@ def forecast_from_csv(csv_file: str,
     df_complete.to_csv(forecast_csv_filename, index=False)
 
 
+
 @app.post("/forecast")
-async def forecast_endpoint(
-    csv_url: str = Form(...),
-    time_col: str = Form(...),
-    value_col: str = Form(...),
-    prediction_steps: int = Form(12)
-):
+async def forecast_endpoint(payload: ForecastRequest):
     """
-    Endpoint to perform time series forecasting.
+    POST endpoint that accepts a JSON payload with:
+      - csv_url: URL link to the CSV file with time series data.
+      - time_col: Name of the date/time column in the CSV.
+      - value_col: Name of the revenue/value column.
+      - prediction_steps: Number of forecast steps (default is 12).
     
-    Accepts:
-      - **csv_url**: A downloadable URL link pointing to the CSV file containing the time series data.
-      - **time_col**: The name of the date/time column in the CSV.
-      - **value_col**: The name of the revenue/value column in the CSV.
-      - **prediction_steps**: The number of future time steps to forecast (default is 12).
-    
-    The endpoint downloads the CSV, processes it to generate a forecast plot and a forecast CSV,
-    and returns the PNG plot as a downloadable file.
+    The endpoint downloads the CSV, runs the forecast, generates a PNG plot, and returns the PNG file.
     """
-    # Download the CSV file from the provided URL.
+    # Download the CSV file from the given URL.
     try:
-        response = requests.get(csv_url)
+        response = requests.get(payload.csv_url)
         response.raise_for_status()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error downloading CSV: {str(e)}")
@@ -288,19 +287,19 @@ async def forecast_endpoint(
     with open(download_filename, "wb") as f:
         f.write(response.content)
     
-    # Define the output filenames.
+    # Define output filenames.
     forecast_png = "forecast.png"
     forecast_csv = "forecasted.csv"
     
+    # Run forecasting (this will generate both the PNG and CSV files).
     try:
-        # Run forecasting to generate the PNG and CSV.
-        forecast_from_csv(download_filename, time_col, value_col, prediction_steps,
-                          png_filename=forecast_png,
+        forecast_from_csv(download_filename, payload.time_col, payload.value_col,
+                          payload.prediction_steps, png_filename=forecast_png,
                           forecast_csv_filename=forecast_csv)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating forecast: {str(e)}")
     
-    # Return the PNG file as a downloadable image.
+    # Open and return the PNG file as a downloadable response.
     try:
         png_file = open(forecast_png, "rb")
     except Exception as e:
@@ -309,6 +308,7 @@ async def forecast_endpoint(
     return StreamingResponse(png_file,
                              media_type="image/png",
                              headers={"Content-Disposition": "attachment; filename=forecast.png"})
+
 
 
 @app.get("/forecast_csv")
