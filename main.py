@@ -1,3 +1,4 @@
+import json
 import os
 from fastapi import FastAPI, Form, HTTPException
 from pydantic import BaseModel
@@ -9,7 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from darts import TimeSeries
 from darts.models import ARIMA
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 # Pydantic model to parse incoming request data
 class ChatbotRequest(BaseModel):
@@ -21,6 +22,9 @@ class DocumentRequest(BaseModel):
 class InvoiceInput(BaseModel):
     invoice_url: str
     purchase_order_url: str
+
+class InvoiceInputExtract(BaseModel):
+    invoice_url: str
 
 class ForecastRequest(BaseModel):
     csv_url: str
@@ -349,3 +353,84 @@ async def forecast_csv_endpoint(payload: ForecastRequest):
     return StreamingResponse(csv_file,
                              media_type="text/csv",
                              headers={"Content-Disposition": "attachment; filename=forecasted.csv"})
+
+
+@app.post("/extract-invoice")
+async def extract_invoice(data: InvoiceInputExtract):
+    # Download the invoice PDF
+    try:
+        invoice_resp = requests.get(data.invoice_url)
+        invoice_resp.raise_for_status()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error downloading invoice file: {e}")
+
+   
+    # Save both files to temporary locations.
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_invoice:
+            temp_invoice.write(invoice_resp.content)
+            invoice_filepath = temp_invoice.name
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving temporary files: {e}")
+
+    # Upload the files to Gemini.
+    try:
+        invoice_doc = client.files.upload(file=invoice_filepath)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error uploading files to Gemini: {e}")
+    finally:
+        # Clean up temporary files.
+        os.remove(invoice_filepath)
+
+   
+    system_prompt = """
+                   You are a specialist in comprehending receipts or invoices.
+                   Input document in the form of receipts or invoces will be provided to you,
+                   and your task is to respond to questions based on the content of the input image.
+                   """
+    user_prompt = "Convert Invoice data into json format with appropriate json tags as required for the data in document "
+
+    input_prompt= [system_prompt,user_prompt]
+
+    # Generate the human-readable summary.
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[input_prompt, invoice_doc],
+        )
+        text = response.text
+        text = text.replace("`","")
+        text = text.replace("json","")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating content: {e}")
+    print(text)
+    data = json.loads(text)
+    record_path = None
+    for key, value in data.items():
+        if isinstance(value, list):
+            record_path = key
+            break
+
+    if record_path is None:
+        raise ValueError("No list found in the JSON data to flatten.")
+
+    # The remaining keys will serve as metadata.
+    meta_fields = [key for key in data.keys() if key != record_path]
+
+    # Flatten the JSON using the detected record_path and metadata fields.
+    df = pd.json_normalize(
+        data,
+        record_path=[record_path],
+        meta=meta_fields,
+        errors='ignore'
+    )
+
+    # Save the flattened DataFrame to a CSV file
+    df.to_csv('invoice.csv', index=False)
+
+     # Return the CSV file as a downloadable response.
+    return FileResponse(
+        path="invoice.csv",
+        media_type='text/csv',
+        filename="extracted_invoice.csv"
+    )
