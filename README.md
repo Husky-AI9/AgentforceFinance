@@ -25,31 +25,31 @@ To deploy the backend
 **2. Financial Document Summary & Number Extraction** – Upload PDFs (invoices, receipts, balance sheets) and let the agent extract all critical figures (amounts, dates, line items), then generate a structured summary with bullet lists of key numbers. This accelerates report reviews and ensures important metrics are never overlooked.
 
 
-<img  src="https://i.imgur.com/MlSELPb.gif" alt="Demo GIF"/>
+<img  src="./Assets/analyze.gif"  alt="Demo GIF"/>
 
 
 **3. Audit-Readiness Assistant** – Continuously evaluates uploaded documents and transaction logs against custom compliance checklists. It compiles risk-scored audit packets—extracting critical clauses and flagging potential issues—so audit teams spend less time assembling materials and more time driving insights.
 
 
-<img  src="https://i.imgur.com/jBmldKz.gif" alt="Demo GIF"/>
+<img   src="./Assets/risk.gif"  alt="Demo GIF"/>
 
 
 **4. Time-Series Forecasting** – Ingest CSV datasets to produce both downloadable CSV forecasts and embedded PNG trend charts. Users can visualize future revenue, expenses, or cash flow directly in chat and export data for deeper analysis, improving budgeting accuracy and strategic planning.
 
 
-<img  src="https://i.imgur.com/3mxokKc.gif"  alt="Demo GIF"/>
+<img  src="./Assets/forecase.gif"   alt="Demo GIF"/>
 
 
 **5. Data Extraction** – A unified pipeline that pulls structured data (numeric and textual) from financial docs such as invoices, receipts, balance sheets, and P&Ls. By standardizing output into Salesforce records, it eliminates manual data entry, reduces errors, and powers downstream automations.
 
 
-<img  src="https://i.imgur.com/dLxjwQs.gif" alt="Demo GIF"/>
+<img    src="./Assets/extract.gif"  alt="Demo GIF"/>
 
 
 **6. Invoice ↔ PO Comparison** – Automatically compares line-items between vendor invoices and purchase orders, highlighting mismatches in quantities, prices, or terms. Each discrepancy is explained in natural language, enabling procurement and finance teams to resolve issues faster and tighten controls.
 
 
-<img  src="https://i.imgur.com/Ad9azjb.gif" alt="Demo GIF"/>
+<img  src="./Assets/compare.gif"  alt="Demo GIF"/>
 
 
 # License
