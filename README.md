@@ -37,7 +37,7 @@ To deploy the backend
 **4. Time-Series Forecasting** – Ingest CSV datasets to produce both downloadable CSV forecasts and embedded PNG trend charts. Users can visualize future revenue, expenses, or cash flow directly in chat and export data for deeper analysis, improving budgeting accuracy and strategic planning.
 
 
-<img  src="./Assets/forecase.gif"   alt="Demo GIF"/>
+<img  src="./Assets/forecast.gif"   alt="Demo GIF"/>
 
 
 **5. Data Extraction** – A unified pipeline that pulls structured data (numeric and textual) from financial docs such as invoices, receipts, balance sheets, and P&Ls. By standardizing output into Salesforce records, it eliminates manual data entry, reduces errors, and powers downstream automations.
