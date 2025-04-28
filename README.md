@@ -19,7 +19,7 @@ To deploy the backend
 **1. Natural-Language Q&A** – Users can ask any finance or accounting question in plain English. The agent taps into Salesforce records, policy documents, and historical transactions to deliver concise, citation-backed answers instantly, cutting research time from hours to seconds.
 
 
-<img src="https://i.imgur.com/3FxZ7lU.gif" width="200px" height="200px"  alt="Demo GIF"/>
+<img src="./Assets/assist.gif" width="200px" height="200px"  alt="Demo GIF"/>
 
 
 **2. Financial Document Summary & Number Extraction** – Upload PDFs (invoices, receipts, balance sheets) and let the agent extract all critical figures (amounts, dates, line items), then generate a structured summary with bullet lists of key numbers. This accelerates report reviews and ensures important metrics are never overlooked.
